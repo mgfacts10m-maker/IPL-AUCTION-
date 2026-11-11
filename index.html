@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPL Auction — 2 Player</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#07111f;color:#fff}
+.wrap{max-width:900px;margin:auto;padding:18px}.card{background:#101d31;border:1px solid #243650;border-radius:16px;padding:18px;margin:12px 0}
+h1,h2{margin:0 0 12px}.muted{color:#9fb0c7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button,input{font:inherit;border-radius:10px;border:0;padding:12px}button{background:#f2b705;color:#111;font-weight:700;cursor:pointer}button.secondary{background:#263852;color:#fff}button.danger{background:#d94b4b;color:#fff}input{width:100%;background:#0a1525;color:#fff;border:1px solid #314762}
+.stat{font-size:24px;font-weight:800}.pill{display:inline-block;background:#182a43;padding:7px 10px;border-radius:999px;margin:3px}
+.auction{text-align:center;padding:25px}.price{font-size:46px;font-weight:900;color:#ffd34d}.player{font-size:30px;font-weight:900}.bidrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #263650;text-align:left}
+.hidden{display:none!important}.ok{color:#6ee7a5}.warn{color:#ffd34d}.room{font-size:22px;letter-spacing:4px;font-weight:900}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.price{font-size:38px}.player{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏏 IPL Auction — 2 Player</h1>
+  <div class="muted">Private room • ₹120 Cr purse each • Live bidding</div>
+
+  <section id="setup" class="card">
+    <h2>Create / Join Room</h2>
+    <div class="grid">
+      <div>
+        <input id="name" placeholder="Your name">
+        <button style="width:100%;margin-top:8px" onclick="createRoom()">Create Room</button>
+      </div>
+      <div>
+        <input id="joinCode" placeholder="Enter room code">
+        <button class="secondary" style="width:100%;margin-top:8px" onclick="joinRoom()">Join Room</button>
+      </div>
+    </div>
+    <p id="status" class="muted"></p>
+  </section>
+
+  <section id="roomCard" class="card hidden">
+    <div class="grid">
+      <div><div class="muted">Room Code</div><div id="roomCode" class="room"></div><button class="secondary" onclick="copyInvite()">Copy Invite</button></div>
+      <div><div class="muted">Connection</div><div id="conn" class="ok">Waiting...</div><div id="players"></div></div>
+    </div>
+  </section>
+
+  <section id="game" class="hidden">
+    <div class="grid">
+      <div class="card"><div class="muted" id="meLabel">Your Purse</div><div class="stat" id="myPurse">₹120 Cr</div><div id="mySquad"></div></div>
+      <div class="card"><div class="muted">Opponent Purse</div><div class="stat" id="oppPurse">₹120 Cr</div><div id="oppSquad"></div></div>
+    </div>
+
+    <div class="card auction">
+      <div class="muted">CURRENT PLAYER</div>
+      <div class="player" id="currentPlayer">Waiting for host…</div>
+      <div id="role" class="muted"></div>
+      <div class="price" id="currentBid">₹0 Cr</div>
+      <div id="bidder" class="muted"></div>
+      <div class="bidrow">
+        <button onclick="bid(0.5)">+₹0.5 Cr</button>
+        <button onclick="bid(1)">+₹1 Cr</button>
+        <button onclick="bid(2)">+₹2 Cr</button>
+        <button class="secondary" onclick="pass()">PASS</button>
+      </div>
+      <div id="hostControls" class="bidrow hidden">
+        <button onclick="startNext()">Start / Next Player</button>
+        <button class="secondary" onclick="sold()">SOLD</button>
+        <button class="danger" onclick="skip()">Skip</button>
+      </div>
+      <div id="message" class="muted"></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Auction Players</h2>
+      <div id="remaining"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const START=120;
+const players=[
+["Rohit Sharma","BAT"],["Virat Kohli","BAT"],["Jasprit Bumrah","BOWL"],["Suryakumar Yadav","BAT"],
+["Hardik Pandya","AR"],["Ravindra Jadeja","AR"],["Rishabh Pant","WK"],["Shubman Gill","BAT"],
+["Yashasvi Jaiswal","BAT"],["Sanju Samson","WK"],["KL Rahul","WK"],["Ruturaj Gaikwad","BAT"],
+["Shreyas Iyer","BAT"],["Kuldeep Yadav","BOWL"],["Mohammed Siraj","BOWL"],["Arshdeep Singh","BOWL"],
+["Axar Patel","AR"],["Rinku Singh","BAT"],["Ishan Kishan","WK"],["Varun Chakravarthy","BOWL"],
+["Travis Head","BAT"],["Heinrich Klaasen","WK"],["Jos Buttler","WK"],["Glenn Maxwell","AR"],
+["Mitchell Starc","BOWL"],["Pat Cummins","BOWL"],["Rashid Khan","BOWL"],["Andre Russell","AR"],
+["Nicholas Pooran","WK"],["Phil Salt","WK"]
+];
+
+let peer,conn,isHost=false,me="",room="",state=null;
+const $=id=>document.getElementById(id);
+function setStatus(x){$("status").textContent=x}
+function createRoom(){
+ me=$("name").value.trim()||"Player 1"; isHost=true;
+ room=Math.random().toString(36).slice(2,8).toUpperCase();
+ peer=new Peer("ipl-auction-"+room);
+ peer.on("open",()=>{showRoom(); setStatus("Room created. Share the code with your friend.");});
+ peer.on("connection",c=>{if(conn)return; conn=c; setupConn();});
+}
+function joinRoom(){
+ me=$("name").value.trim()||"Player 2"; room=$("joinCode").value.trim().toUpperCase();
+ if(!room)return setStatus("Enter room code.");
+ peer=new Peer();
+ peer.on("open",()=>{conn=peer.connect("ipl-auction-"+room); setupConn();});
+ peer.on("error",e=>setStatus("Could not join room. Check the code."));
+}
+function setupConn(){
+ conn.on("open",()=>{
+  showRoom(); $("conn").textContent="Connected ✓"; $("conn").className="ok";
+  send({type:"hello",name:me});
+  if(isHost){initState();sendState();}
+ });
+ conn.on("data",handle);
+ conn.on("close",()=>{$("conn").textContent="Disconnected";});
+}
+function showRoom(){
+ $("setup").classList.add("hidden");$("roomCard").classList.remove("hidden");$("game").classList.remove("hidden");
+ $("roomCode").textContent=room; $("role").textContent=isHost?"You are HOST — control the auction.":"You are PLAYER 2 — bid when ready.";
+ $("hostControls").classList.toggle("hidden",!isHost);
+}
+function initState(){
+ state={players:[{name:me,purse:START,squad:[]},{name:"Waiting…",purse:START,squad:[]}],
+ idx:0,active:false,current:null,bid:0,bidder:null,remaining:players.map((_,i)=>i),msg:"Waiting for Player 2…"};
+}
+function send(x){if(conn&&conn.open)conn.send(x)}
+function sendState(){send({type:"state",state});render()}
+function handle(x){
+ if(x.type==="hello"){
+  if(isHost){state.players[1].name=x.name;state.msg="Both players connected. Start the auction.";sendState();}
+ }else if(x.type==="state"){state=x.state;render()}
+ else if(x.type==="bid"&&isHost){hostBid(x.amount,x.player)}
+}
+function bid(add){
+ if(!state||!state.active)return;
+ let p=state.players.findIndex(x=>x.name===me); if(p<0)return;
+ let next=Number((state.bid+add).toFixed(1));
+ if(next>state.players[p].purse)return $("message").textContent="Not enough purse!";
+ if(state.bidder===p)return $("message").textContent="You are already highest bidder.";
+ if(isHost)hostBid(add,p); else send({type:"bid",amount:add,player:p});
+}
+function hostBid(add,p){
+ let next=Number((state.bid+add).toFixed(1));
+ if(next>state.players[p].purse)return;
+ state.bid=next;state.bidder=p;state.msg=state.players[p].name+" bid ₹"+next+" Cr";
+ sendState();
+}
+function pass(){ $("message").textContent="You passed on this bid."; }
+function startNext(){
+ if(!isHost||state.remaining.length===0)return;
+ if(state.active)return $("message").textContent="Finish this player first.";
+ state.idx=state.remaining.shift();
+ state.current=players[state.idx];
+ state.bid=0;state.bidder=null;state.active=true;state.msg="Bidding is open!";
+ sendState();
+}
+function sold(){
+ if(!isHost||!state.active)return;
+ if(state.bidder===null){state.msg="No bid — use Skip.";return sendState();}
+ let p=state.players[state.bidder];
+ p.purse=Number((p.purse-state.bid).toFixed(1));
+ p.squad.push({name:state.current[0],role:state.current[1],price:state.bid});
+ state.msg=state.current[0]+" SOLD to "+p.name+" for ₹"+state.bid+" Cr";
+ state.active=false;state.current=null;state.bid=0;state.bidder=null;sendState();
+}
+function skip(){
+ if(!isHost||!state.active)return;
+ state.msg=state.current[0]+" skipped.";
+ state.active=false;state.current=null;state.bid=0;state.bidder=null;sendState();
+}
+function render(){
+ if(!state)return;
+ let meIdx=state.players.findIndex(x=>x.name===me);let opp=meIdx===0?1:0;
+ $("myPurse").textContent="₹"+state.players[meIdx].purse+" Cr";
+ $("oppPurse").textContent="₹"+state.players[opp].purse+" Cr";
+ $("meLabel").textContent=state.players[meIdx].name+"'s Purse";
+ $("players").innerHTML=state.players.map((p,i)=>`<span class="pill">${i===meIdx?"You: ":""}${p.name}</span>`).join("");
+ $("currentPlayer").textContent=state.current?state.current[0]+" • "+state.current[1]:"Waiting for next player…";
+ $("currentBid").textContent="₹"+state.bid+" Cr";
+ $("bidder").textContent=state.bidder===null?"No bids yet":state.players[state.bidder].name+" is highest bidder";
+ $("message").textContent=state.msg||"";
+ $("mySquad").innerHTML="<b>Squad ("+state.players[meIdx].squad.length+")</b><br>"+state.players[meIdx].squad.map(x=>`<span class="pill">${x.name} ₹${x.price}Cr</span>`).join("");
+ $("oppSquad").innerHTML="<b>Squad ("+state.players[opp].squad.length+")</b><br>"+state.players[opp].squad.map(x=>`<span class="pill">${x.name} ₹${x.price}Cr</span>`).join("");
+ $("remaining").innerHTML=state.remaining.map(i=>players[i][0]).join(" • ")||"Auction finished 🎉";
+}
+function copyInvite(){
+ let url=location.href.split("?")[0]+"?room="+room;
+ navigator.clipboard?.writeText(url+" | Room: "+room);
+ alert("Room code copied: "+room+"\\nSend the code to your friend.");
+}
+let q=new URLSearchParams(location.search).get("room"); if(q)$("joinCode").value=q;
+</script>
+</body>
+</html>
