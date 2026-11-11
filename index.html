@@ -1,196 +1,47 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IPL Auction — 2 Player</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IPL Auction Dream XI</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#07111f;color:#fff}
-.wrap{max-width:900px;margin:auto;padding:18px}.card{background:#101d31;border:1px solid #243650;border-radius:16px;padding:18px;margin:12px 0}
-h1,h2{margin:0 0 12px}.muted{color:#9fb0c7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-button,input{font:inherit;border-radius:10px;border:0;padding:12px}button{background:#f2b705;color:#111;font-weight:700;cursor:pointer}button.secondary{background:#263852;color:#fff}button.danger{background:#d94b4b;color:#fff}input{width:100%;background:#0a1525;color:#fff;border:1px solid #314762}
-.stat{font-size:24px;font-weight:800}.pill{display:inline-block;background:#182a43;padding:7px 10px;border-radius:999px;margin:3px}
-.auction{text-align:center;padding:25px}.price{font-size:46px;font-weight:900;color:#ffd34d}.player{font-size:30px;font-weight:900}.bidrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
-table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #263650;text-align:left}
-.hidden{display:none!important}.ok{color:#6ee7a5}.warn{color:#ffd34d}.room{font-size:22px;letter-spacing:4px;font-weight:900}
-@media(max-width:650px){.grid{grid-template-columns:1fr}.price{font-size:38px}.player{font-size:25px}}
-</style>
-</head>
-<body>
+body{margin:0;background:#080d1c;color:#fff;font-family:Arial}.wrap{max-width:1050px;margin:auto;padding:16px}.card{background:#121a30;border:1px solid #2b3b62;border-radius:16px;padding:16px;margin:12px 0}button{border:0;border-radius:10px;padding:12px 16px;margin:4px;font-weight:700;cursor:pointer;background:#29436f;color:white}.blue{background:#1677ff}.green{background:#14a568}.red{background:#d93d4f}.gold{background:#d89a27;color:#111}input,select{background:#0b1225;color:white;border:1px solid #3a4b74;border-radius:9px;padding:11px;width:100%;box-sizing:border-box}label{font-size:12px;color:#aebbd7;display:block;margin:8px 0 4px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.auction{display:grid;grid-template-columns:1fr 1fr;gap:12px}.player{text-align:center;min-height:330px;display:flex;flex-direction:column;justify-content:center;align-items:center;background:radial-gradient(circle,#263d70,#0d1428);border-radius:16px}.avatar{width:110px;height:110px;border-radius:50%;display:grid;place-items:center;background:#397eff;font-size:40px;font-weight:900}.big{font-size:38px;font-weight:900;margin:8px}.timer{font-size:28px;color:#ffd35a;font-weight:900}.room{font-size:22px;letter-spacing:4px;color:#63a9ff}.team{border:1px solid #33466f;border-radius:12px;padding:10px;margin:8px 0}.money{color:#5be6a1;font-weight:900}.chips span{display:inline-block;background:#1a2949;padding:6px;border-radius:7px;font-size:11px;margin:3px}.xi{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.slot{background:#0d1730;border:1px dashed #40547f;padding:8px;border-radius:8px;font-size:11px}.muted{color:#9eacd0;font-size:13px}.hidden{display:none}.winner{font-size:30px;color:#ffd35a;font-weight:900}@media(max-width:700px){.auction{grid-template-columns:1fr}.xi{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<div class="card"><div class="wrap"><h1>🏏 IPL AUCTION — DREAM XI</h1><div class="muted">Real-style auction • ₹100 purse • 1v1 / 3 Players • Auctioneer voice</div></div></div>
 <div class="wrap">
-  <h1>🏏 IPL Auction — 2 Player</h1>
-  <div class="muted">Private room • ₹120 Cr purse each • Live bidding</div>
-
-  <section id="setup" class="card">
-    <h2>Create / Join Room</h2>
-    <div class="grid">
-      <div>
-        <input id="name" placeholder="Your name">
-        <button style="width:100%;margin-top:8px" onclick="createRoom()">Create Room</button>
-      </div>
-      <div>
-        <input id="joinCode" placeholder="Enter room code">
-        <button class="secondary" style="width:100%;margin-top:8px" onclick="joinRoom()">Join Room</button>
-      </div>
-    </div>
-    <p id="status" class="muted"></p>
-  </section>
-
-  <section id="roomCard" class="card hidden">
-    <div class="grid">
-      <div><div class="muted">Room Code</div><div id="roomCode" class="room"></div><button class="secondary" onclick="copyInvite()">Copy Invite</button></div>
-      <div><div class="muted">Connection</div><div id="conn" class="ok">Waiting...</div><div id="players"></div></div>
-    </div>
-  </section>
-
-  <section id="game" class="hidden">
-    <div class="grid">
-      <div class="card"><div class="muted" id="meLabel">Your Purse</div><div class="stat" id="myPurse">₹120 Cr</div><div id="mySquad"></div></div>
-      <div class="card"><div class="muted">Opponent Purse</div><div class="stat" id="oppPurse">₹120 Cr</div><div id="oppSquad"></div></div>
-    </div>
-
-    <div class="card auction">
-      <div class="muted">CURRENT PLAYER</div>
-      <div class="player" id="currentPlayer">Waiting for host…</div>
-      <div id="role" class="muted"></div>
-      <div class="price" id="currentBid">₹0 Cr</div>
-      <div id="bidder" class="muted"></div>
-      <div class="bidrow">
-        <button onclick="bid(0.5)">+₹0.5 Cr</button>
-        <button onclick="bid(1)">+₹1 Cr</button>
-        <button onclick="bid(2)">+₹2 Cr</button>
-        <button class="secondary" onclick="pass()">PASS</button>
-      </div>
-      <div id="hostControls" class="bidrow hidden">
-        <button onclick="startNext()">Start / Next Player</button>
-        <button class="secondary" onclick="sold()">SOLD</button>
-        <button class="danger" onclick="skip()">Skip</button>
-      </div>
-      <div id="message" class="muted"></div>
-    </div>
-
-    <div class="card">
-      <h2>📋 Auction Players</h2>
-      <div id="remaining"></div>
-    </div>
-  </section>
-</div>
-
+<div id="setup" class="card"><h2>Create / Join Room</h2><div class="grid"><div>
+<label>Your Name</label><input id="name" placeholder="Mohit">
+<label>Team Name</label><input id="team" placeholder="Mohit XI"><label>Admin PIN</label><input id="adminPin" type="password" placeholder="Create a 6-digit PIN">
+<label>Mode</label><select id="mode"><option value="2">1 vs 1</option><option value="3">3 Players</option></select>
+<button class="blue" onclick="create()">👑 CREATE ADMIN ROOM</button></div><div>
+<label>Room Code</label><input id="join" placeholder="ABC123"><button class="green" onclick="join()">JOIN ROOM</button>
+<div id="roombox" class="hidden">Room: <span id="rcode" class="room"></span></div></div></div></div>
+<div id="game" class="hidden">
+<div class="grid"><div class="card">Room: <b id="room"></b><br><span id="adminBadge" class="gold" style="display:inline-block;padding:5px 8px;border-radius:8px;margin-top:7px">PLAYER</span><br><span class="muted" id="modeText"></span></div><div class="card">Current Player: <b id="pn">Waiting</b><br><span id="pm" class="muted"></span></div></div>
+<div class="auction"><div class="player"><div id="av" class="avatar">?</div><div id="base" class="muted"></div><div id="bid" class="big">₹0</div><div id="lead" class="muted"></div><div id="timer" class="timer">—</div></div>
+<div><div class="card"><h3>LIVE BIDDING</h3><button onclick="bid(1)">+₹1</button><button onclick="bid(2)">+₹2</button><button onclick="bid(5)">+₹5</button><br><button class="red" onclick="pass()">🔴 PASS</button><button class="green" onclick="sold()">🟢 SOLD</button><p class="muted">SOLD is host-controlled. PASS removes you from this player.</p></div>
+<div class="card"><h3>Teams</h3><div id="teams"></div></div><div class="card"><h3>Auction Log</h3><div id="log" class="muted"></div></div></div></div>
+<div class="card"><h3>🏆 Dream XI</h3><div id="xi" class="muted">After auction, choose 11 players and Captain/Vice-Captain.</div></div><div id="result" class="card hidden"></div>
+</div></div>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const START=120;
-const players=[
-["Rohit Sharma","BAT"],["Virat Kohli","BAT"],["Jasprit Bumrah","BOWL"],["Suryakumar Yadav","BAT"],
-["Hardik Pandya","AR"],["Ravindra Jadeja","AR"],["Rishabh Pant","WK"],["Shubman Gill","BAT"],
-["Yashasvi Jaiswal","BAT"],["Sanju Samson","WK"],["KL Rahul","WK"],["Ruturaj Gaikwad","BAT"],
-["Shreyas Iyer","BAT"],["Kuldeep Yadav","BOWL"],["Mohammed Siraj","BOWL"],["Arshdeep Singh","BOWL"],
-["Axar Patel","AR"],["Rinku Singh","BAT"],["Ishan Kishan","WK"],["Varun Chakravarthy","BOWL"],
-["Travis Head","BAT"],["Heinrich Klaasen","WK"],["Jos Buttler","WK"],["Glenn Maxwell","AR"],
-["Mitchell Starc","BOWL"],["Pat Cummins","BOWL"],["Rashid Khan","BOWL"],["Andre Russell","AR"],
-["Nicholas Pooran","WK"],["Phil Salt","WK"]
-];
-
-let peer,conn,isHost=false,me="",room="",state=null;
-const $=id=>document.getElementById(id);
-function setStatus(x){$("status").textContent=x}
-function createRoom(){
- me=$("name").value.trim()||"Player 1"; isHost=true;
- room=Math.random().toString(36).slice(2,8).toUpperCase();
- peer=new Peer("ipl-auction-"+room);
- peer.on("open",()=>{showRoom(); setStatus("Room created. Share the code with your friend.");});
- peer.on("connection",c=>{if(conn)return; conn=c; setupConn();});
-}
-function joinRoom(){
- me=$("name").value.trim()||"Player 2"; room=$("joinCode").value.trim().toUpperCase();
- if(!room)return setStatus("Enter room code.");
- peer=new Peer();
- peer.on("open",()=>{conn=peer.connect("ipl-auction-"+room); setupConn();});
- peer.on("error",e=>setStatus("Could not join room. Check the code."));
-}
-function setupConn(){
- conn.on("open",()=>{
-  showRoom(); $("conn").textContent="Connected ✓"; $("conn").className="ok";
-  send({type:"hello",name:me});
-  if(isHost){initState();sendState();}
- });
- conn.on("data",handle);
- conn.on("close",()=>{$("conn").textContent="Disconnected";});
-}
-function showRoom(){
- $("setup").classList.add("hidden");$("roomCard").classList.remove("hidden");$("game").classList.remove("hidden");
- $("roomCode").textContent=room; $("role").textContent=isHost?"You are HOST — control the auction.":"You are PLAYER 2 — bid when ready.";
- $("hostControls").classList.toggle("hidden",!isHost);
-}
-function initState(){
- state={players:[{name:me,purse:START,squad:[]},{name:"Waiting…",purse:START,squad:[]}],
- idx:0,active:false,current:null,bid:0,bidder:null,remaining:players.map((_,i)=>i),msg:"Waiting for Player 2…"};
-}
-function send(x){if(conn&&conn.open)conn.send(x)}
-function sendState(){send({type:"state",state});render()}
-function handle(x){
- if(x.type==="hello"){
-  if(isHost){state.players[1].name=x.name;state.msg="Both players connected. Start the auction.";sendState();}
- }else if(x.type==="state"){state=x.state;render()}
- else if(x.type==="bid"&&isHost){hostBid(x.amount,x.player)}
-}
-function bid(add){
- if(!state||!state.active)return;
- let p=state.players.findIndex(x=>x.name===me); if(p<0)return;
- let next=Number((state.bid+add).toFixed(1));
- if(next>state.players[p].purse)return $("message").textContent="Not enough purse!";
- if(state.bidder===p)return $("message").textContent="You are already highest bidder.";
- if(isHost)hostBid(add,p); else send({type:"bid",amount:add,player:p});
-}
-function hostBid(add,p){
- let next=Number((state.bid+add).toFixed(1));
- if(next>state.players[p].purse)return;
- state.bid=next;state.bidder=p;state.msg=state.players[p].name+" bid ₹"+next+" Cr";
- sendState();
-}
-function pass(){ $("message").textContent="You passed on this bid."; }
-function startNext(){
- if(!isHost||state.remaining.length===0)return;
- if(state.active)return $("message").textContent="Finish this player first.";
- state.idx=state.remaining.shift();
- state.current=players[state.idx];
- state.bid=0;state.bidder=null;state.active=true;state.msg="Bidding is open!";
- sendState();
-}
-function sold(){
- if(!isHost||!state.active)return;
- if(state.bidder===null){state.msg="No bid — use Skip.";return sendState();}
- let p=state.players[state.bidder];
- p.purse=Number((p.purse-state.bid).toFixed(1));
- p.squad.push({name:state.current[0],role:state.current[1],price:state.bid});
- state.msg=state.current[0]+" SOLD to "+p.name+" for ₹"+state.bid+" Cr";
- state.active=false;state.current=null;state.bid=0;state.bidder=null;sendState();
-}
-function skip(){
- if(!isHost||!state.active)return;
- state.msg=state.current[0]+" skipped.";
- state.active=false;state.current=null;state.bid=0;state.bidder=null;sendState();
-}
-function render(){
- if(!state)return;
- let meIdx=state.players.findIndex(x=>x.name===me);let opp=meIdx===0?1:0;
- $("myPurse").textContent="₹"+state.players[meIdx].purse+" Cr";
- $("oppPurse").textContent="₹"+state.players[opp].purse+" Cr";
- $("meLabel").textContent=state.players[meIdx].name+"'s Purse";
- $("players").innerHTML=state.players.map((p,i)=>`<span class="pill">${i===meIdx?"You: ":""}${p.name}</span>`).join("");
- $("currentPlayer").textContent=state.current?state.current[0]+" • "+state.current[1]:"Waiting for next player…";
- $("currentBid").textContent="₹"+state.bid+" Cr";
- $("bidder").textContent=state.bidder===null?"No bids yet":state.players[state.bidder].name+" is highest bidder";
- $("message").textContent=state.msg||"";
- $("mySquad").innerHTML="<b>Squad ("+state.players[meIdx].squad.length+")</b><br>"+state.players[meIdx].squad.map(x=>`<span class="pill">${x.name} ₹${x.price}Cr</span>`).join("");
- $("oppSquad").innerHTML="<b>Squad ("+state.players[opp].squad.length+")</b><br>"+state.players[opp].squad.map(x=>`<span class="pill">${x.name} ₹${x.price}Cr</span>`).join("");
- $("remaining").innerHTML=state.remaining.map(i=>players[i][0]).join(" • ")||"Auction finished 🎉";
-}
-function copyInvite(){
- let url=location.href.split("?")[0]+"?room="+room;
- navigator.clipboard?.writeText(url+" | Room: "+room);
- alert("Room code copied: "+room+"\\nSend the code to your friend.");
-}
-let q=new URLSearchParams(location.search).get("room"); if(q)$("joinCode").value=q;
-</script>
-</body>
-</html>
+const P=[["Virat Kohli","BAT",10],["Rohit Sharma","BAT",10],["Jasprit Bumrah","BOWL",9],["Hardik Pandya","AR",8],["Ravindra Jadeja","AR",8],["Rishabh Pant","WK",8],["Suryakumar Yadav","BAT",7],["Shubman Gill","BAT",8],["KL Rahul","WK",7],["Mohammed Siraj","BOWL",6],["Kuldeep Yadav","BOWL",6],["Yashasvi Jaiswal","BAT",7],["Sanju Samson","WK",6],["Rinku Singh","BAT",5],["Axar Patel","AR",6],["Arshdeep Singh","BOWL",5],["Ruturaj Gaikwad","BAT",6],["Shreyas Iyer","BAT",6],["Rashid Khan","BOWL",8],["Andre Russell","AR",7],["Sunil Narine","AR",7],["Pat Cummins","BOWL",7],["Travis Head","BAT",7],["Jos Buttler","WK",8],["Yuzvendra Chahal","BOWL",5],["Ishan Kishan","WK",5],["Tilak Varma","BAT",5],["Shivam Dube","AR",5],["Kagiso Rabada","BOWL",6],["David Miller","BAT",5]];
+let s={host:false,room:"",mode:2,peer:null,conn:null,cs:[],teams:[],idx:0,cur:null,bid:0,lead:null,passed:{},active:false,done:false,timer:0,adminPin:"",adminToken:""};
+const $=x=>document.getElementById(x); const speak=t=>{try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}catch(e){}};
+function team(n,t){return{name:n,team:t,purse:100,squad:[],xi:[],cap:null,vc:null}};
+function send(m){s.cs.forEach(c=>{try{c.send(m)}catch(e){}});if(s.conn)try{s.conn.send(m)}catch(e){}}
+function snap(){return{teams:s.teams,idx:s.idx,cur:s.cur,bid:s.bid,lead:s.lead,passed:s.passed,active:s.active,done:s.done,timer:s.timer}};
+function render(){if(!s.cur)return;$("pn").textContent=s.cur[0];$("pm").textContent=s.cur[1]+" • Base ₹"+s.cur[2];$("av").textContent=s.cur[0].split(" ").map(x=>x[0]).join("").slice(0,2);$("base").textContent="Base Price ₹"+s.cur[2];$("bid").textContent="₹"+s.bid;$("lead").textContent=s.lead?"Highest bid: "+s.lead:"No bids";$("timer").textContent=s.active?"⏱️ "+s.timer+"s":(s.done?"Auction Over":"SOLD / UNSOLD");
+$("teams").innerHTML=s.teams.map(t=>'<div class="team"><b>'+t.team+'</b> <span class="money">₹'+t.purse+'</span><div class="muted">'+t.name+" • "+t.squad.length+' players</div><div class="chips">'+(t.squad.map(p=>"<span>"+p.name+" ₹"+p.price+"</span>").join("")||"No players")+"</div></div>").join("");
+$("xi").innerHTML=s.done?s.teams.map((t,i)=>'<div class="card"><b>'+t.team+'</b><div class="xi">'+t.squad.map((p,j)=>'<label class="slot"><input type="checkbox" '+(t.xi.includes(j)?"checked":"")+' onchange="toggle('+i+','+j+',this.checked)"> '+p.name+'<br>'+p.role+"</label>").join("")+'</div><br>Captain <select onchange="cap('+i+',this.value)"><option value="">Select</option>'+t.xi.map(j=>'<option value="'+j+'" '+(t.cap===j?"selected":"")+'>'+t.squad[j].name+"</option>").join("")+'</select> Vice-Captain <select onchange="vc('+i+',this.value)"><option value="">Select</option>'+t.xi.map(j=>'<option value="'+j+'" '+(t.vc===j?"selected":"")+'>'+t.squad[j].name+"</option>").join("")+"</select></div>").join(""):"After auction, choose 11 players and Captain/Vice-Captain.";if(s.done)result()};
+function start(){ $("setup").classList.add("hidden");$("game").classList.remove("hidden");$("adminBadge").textContent=s.host?"👑 ADMIN":"👤 PLAYER";$("adminBadge").style.background=s.host?"#d89a27":"#29436f";$("room").textContent=s.room;$("modeText").textContent=s.mode==2?"1 vs 1":"3 Players";if(s.host&&s.teams.length==s.mode&&!s.cur)next();render()}
+function create(){let n=$("name").value.trim()||"Admin",t=$("team").value.trim()||n+" XI",pin=$("adminPin").value.trim();if(!/^[0-9]{6}$/.test(pin))return alert("Admin PIN 6 digits ka hona chahiye.");s.mode=+$("mode").value;s.room=Math.random().toString(36).slice(2,8).toUpperCase();s.host=true;s.adminPin=pin;s.adminToken=Math.random().toString(36).slice(2)+Date.now().toString(36);s.teams=[team(n,t)];s.peer=new Peer("ipl-"+s.room);s.peer.on("open",()=>{$("rcode").textContent=s.room;$("roombox").classList.remove("hidden");start()});s.peer.on("connection",c=>{c.on("open",()=>{s.cs.push(c);c.on("data",msg);c.send({type:"hello",mode:s.mode,admin:false,token:s.adminToken})})})}
+function join(){let n=$("name").value.trim()||"Player",t=$("team").value.trim()||n+" XI",r=$("join").value.trim().toUpperCase();s.room=r;s.peer=new Peer();s.peer.on("open",()=>{s.conn=s.peer.connect("ipl-"+r);s.conn.on("open",()=>s.conn.send({type:"join",name:n,team:t}));s.conn.on("data",msg)})}
+function msg(m){if(m.type==="join"&&s.host&&s.teams.length<s.mode){s.teams.push(team(m.name,m.team));send({type:"state",s:snap()});start()}if(m.type==="state"){Object.assign(s,m.s);start();render()}if(m.type==="bid"&&s.host)hostBid(m.by,m.amount);if(m.type==="pass"&&s.host){s.passed[m.by]=1;check()}if(m.type==="sold"&&s.host)hostSold()}
+function next(){if(!s.host)return;if(s.idx>=P.length){s.done=true;s.active=false;send({type:"state",s:snap()});render();speak("Auction complete. Build your Dream XI.");return}s.cur=P[s.idx++];s.bid=s.cur[2];s.lead=null;s.passed={};s.active=true;s.timer=15;speak(s.cur[0]+" is up for auction. Base price "+s.cur[2]+" rupees.");send({type:"state",s:snap()});render();clearInterval(window.t);window.t=setInterval(()=>{if(!s.active)return;s.timer--;if(s.timer==5)speak("Going once");if(s.timer==2)speak("Going twice");if(s.timer<=0){clearInterval(window.t);s.lead?hostSold():unsold()}send({type:"state",s:snap()});render()},1000)}
+function bid(a){if(!s.cur||!s.active||s.passed[s.teams[0].name])return;let me=s.teams.find(t=>t===s.teams[0]||t.name===$("name").value.trim());if(!me)return;let n=s.bid==s.cur[2]?s.cur[2]+a:s.bid+a;if(n>me.purse)return alert("Purse insufficient");if(s.host)hostBid(me.name,n);else s.conn.send({type:"bid",by:me.name,amount:n})}
+function hostBid(by,n){let t=s.teams.find(x=>x.name===by);if(t&&n<=t.purse&&n>s.bid){s.bid=n;s.lead=by;s.passed={};s.timer=15;speak(by+" bids "+n+" rupees");send({type:"state",s:snap()});render()}}
+function pass(){let me=s.teams.find(t=>t.name===$("name").value.trim());if(s.host){s.passed[me.name]=1;check()}else s.conn.send({type:"pass",by:me.name})}
+function check(){let a=s.teams.filter(t=>!s.passed[t.name]);if(a.length<=1)(s.lead?hostSold():unsold())}
+function sold(){if(!s.host)return alert("Sirf Admin SOLD kar sakta hai.");hostSold()}
+function hostSold(){if(!s.lead)return unsold();let t=s.teams.find(x=>x.name===s.lead);if(!t||t.purse<s.bid)return;t.purse-=s.bid;t.squad.push({name:s.cur[0],role:s.cur[1],price:s.bid});s.active=false;speak("Sold! "+s.cur[0]+" to "+t.team+" for "+s.bid+" rupees");send({type:"state",s:snap()});render();setTimeout(next,1500)}
+function unsold(){s.active=false;speak(s.cur[0]+" unsold");send({type:"state",s:snap()});render();setTimeout(next,1200)}
+function toggle(i,j,on){let t=s.teams[i];if(on&&!t.xi.includes(j))t.xi.push(j);if(!on)t.xi=t.xi.filter(x=>x!=j);if(t.xi.length>11)t.xi=t.xi.slice(0,11);send({type:"state",s:snap()});render()}
+function cap(i,v){s.teams[i].cap=v===""?null:+v;send({type:"state",s:snap()});render()}function vc(i,v){s.teams[i].vc=v===""?null:+v;send({type:"state",s:snap()});render()}
+function result(){let a=s.teams.map(t=>({...t,score:t.xi.length*10+(t.cap!=null?20:0)+(t.vc!=null?10:0)})).sort((x,y)=>y.score-x.score);$("result").classList.remove("hidden");$("result").innerHTML='<div class="winner">🏆 '+a[0].team+' WINS!</div><p class="muted">Final Dream XI result</p>'+a.map((t,i)=>'<div class="card"><b>'+(i+1)+'. '+t.team+'</b> — '+t.score+' points<br>XI '+t.xi.length+'/11 • Remaining ₹'+t.purse+'</div>').join("")}
+</script></body></html>
